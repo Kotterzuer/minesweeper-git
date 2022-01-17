@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .Lost {
+            background-color: rgb(236, 88, 19);
+            border: 3px solid #000000;
+            width: 30px;
+            height: 30px;
+            margin: 0;
+        }
+
+        .empty {
+            background-color: rgb(255, 255, 255);
+            border: 3px solid #000000;
+            width: 30px;
+            height: 30px;
+            margin: 0;
+        }
+        .marked {
+            background-color: rgb(31, 182, 69);
+            border: 3px solid #000000;
+            width: 30px;
+            height: 30px;
+            margin: 0;
+        }
+
+        button {
+            background-color: rgb(223, 139, 30);
+            border: 3px solid #b845a8;
+            width: 30px;
+            height: 30px;
+            margin: 0;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 10px;
+        }
+
+        button[bombe=true] {
+            background-color: red;
+        }
+
+        th, td {
+            padding: 0;
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body id="body">
+<table>
+    <tbody id="tbody"></tbody>
+</table>
+<script>
+    //Variablen
+    let size = 10;
+    let blocks = [];
+    let clicked = Array(size * size).fill(false);
+    let rightclicked = Array(size * size).fill(false);
+    let id = 0;
+
+    let bomb= calculateBombs();
+    let won = bomb.slice();
+    createTableCells();
+
+    function calculateBombs() {                                //Bestimmung ob Bombe vorhanden oder nicht
+        const result = []
+        let Wahrscheinlichkeit = {                   //Wahrscheinlichkeit für eine Bombe (x : y)
+            x: 10,
+            y: 9
+        }
+        for (let i = 0; i < size * size; i++) {
+            const randomNumber = Math.floor(Math.random() * Wahrscheinlichkeit.x);
+            if (randomNumber < Wahrscheinlichkeit.y) {
+                result.push(0)
+            } else {
+                result.push(1);
+            }
+        }
+        return result;
+    }
+
+    function calculateNeighbours(id) {
+        const result = [];
+        const isFirstRow = id < size;
+        const isLastRow = (size - 1) * size <= id;
+        
+        // has left neighbour
+        if (id % size !== 0) {
+            result.push(id - 1);
+            if (!isFirstRow) {
+                result.push(id - 1 - size)
+            }
+            if (!isLastRow) {
+                result.push(id - 1 + size)
+            }
+        }
+        // has right neighbour
+        if (id % size <= size-2) {
+            result.push(id + 1)
+            if (!isFirstRow) {
+                result.push(id + 1 - size)
+            }
+            if (!isLastRow) {
+                result.push(id + 1 + size)
+            }
+        }
+        if (!isFirstRow) {
+            result.push(id - size)
+        }
+        if (!isLastRow) {
+            result.push(id + size)
+        }
+        return result
+    }
+
+    
+
+    function createTableCells() {
+        const tableBody = document.getElementById('tbody');
+        //Tabelle erstellen
+        for (let i = 0; i < size; i++) {
+            const tableRow = document.createElement('tr');
+            tableBody.appendChild(tableRow);
+
+            for (let k = 0; k < size; k++) {
+                const index = i * size + k;
+                const tableCell = document.createElement('td');
+                const block = document.createElement('button');
+                tableRow.appendChild(tableCell);
+                tableCell.appendChild(block)
+                block.setAttribute("id", index);
+                // mark bombs 
+               // block.setAttribute("bombe", bomb[index]===1)
+                block.setAttribute('value', calculateNeighbours(index).map(n => bomb[n]).reduce((prev, curr) => prev + curr));
+                block.addEventListener("click", onBlockClick);
+                block.addEventListener('contextmenu', rightclick); 
+                block.addEventListener('contextmenu', event => event.preventDefault());
+                
+                
+                blocks[index] = block;
+            }
+        }
+    }
+    
+    function rightclick(evt) {
+        
+        const target = evt.target;
+        const index = parseInt(target.getAttribute('id'))
+        
+       // const index = id;
+        
+        if(rightclicked[index]===false){
+            rightclicked[index] = true;
+            
+            target.classList.add('marked');
+            
+        }else{
+            rightclicked[index] = false;
+            target.classList.remove('marked');
+        }
+       
+    }
+    
+    function onBlockClick(evt) {
+        
+        const target = evt.target;
+        const index = parseInt(target.getAttribute('id'))
+        if(rightclicked[index]===false){
+            if (clicked[index]===false){
+                clicked[index] = true;
+                won[index]=1;
+                if (bomb[index]) {
+                    target.classList.add('Lost');
+                    alert('you lose')
+                } else {
+                    const neighbours = {[index]: true};
+                    if (target.getAttribute('value') === '0') {
+                        let round = calculateNeighbours(index);
+                        while (round.length !== 0) {
+                            const nextRound = []
+                            for (let blockNr of round) {
+                                if (neighbours[blockNr] !== true) {
+                                    neighbours[blockNr] = true;
+                                    if (blocks[blockNr].getAttribute('value') === '0') {
+                                        nextRound.push(...calculateNeighbours(blockNr))
+                                    }
+                                }
+                            }
+                            round = nextRound;
+                        }
+                    }
+                    Object.keys(neighbours).forEach(n => {
+                        const block = blocks[n];
+                        block.classList.add('empty');
+                        clicked[parseInt(block.getAttribute('id'))]=true;
+                        won[parseInt(block.getAttribute('id'))]=1;
+                        const blockValue = block.getAttribute('value');
+                        if (blockValue !== '0') {
+                            block.innerText = blockValue
+                        }
+                    })
+                } 
+            }
+            
+            let checkwon = won.find(element => element ===0);
+            if (checkwon===undefined){
+                
+                
+              
+                alert('Gewonnen!');
+                bomb= calculateBombs();
+                
+                calculateNeighbours();
+                
+                won = bomb.slice();
+                clicked = Array(size * size).fill(false);
+                rightclicked = Array(size * size).fill(false);
+                
+                for(i=0; i<size*size;i++){
+                    const block = blocks[i];
+                    block.classList.remove('empty');
+                    block.classList.remove('marked');
+                    
+                    block.innerText = "";
+                    block.setAttribute('value', calculateNeighbours(i).map(n => bomb[n]).reduce((prev, curr) => prev + curr));
+                   // block.setAttribute("bombe", bomb[i] === 1)
+                   
+                }
+                
+               
+            }
+        }
+        
+
+
+    }
+
+</script>
+
+
+</body>
+</html>

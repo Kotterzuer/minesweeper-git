@@ -60,14 +60,28 @@
 <script>
     //Variablen
     let size = 10;
-    let blocks = [];
-    let clicked = Array(size * size).fill(false);
-    let rightclicked = Array(size * size).fill(false);
-    let id = 0;
+    let blocks;
+    let clicked ;
+    let markers ;
 
-    let bomb= calculateBombs();
-    let won = bomb.slice();
-    createTableCells();
+    let bombs;
+    let won;
+
+    init();
+    
+    function init(){
+        // initialize variables
+        blocks = [];
+        clicked = Array(size * size).fill(false);
+        markers = Array(size * size).fill(false);
+        bombs= calculateBombs();
+        won = [...bombs];
+        
+        //reset table
+        const tbody= document.getElementById('tbody');
+        tbody.innerHTML = '';
+        createTableCells();
+    }
 
     function calculateBombs() {                                //Bestimmung ob Bombe vorhanden oder nicht
         const result = []
@@ -137,11 +151,10 @@
                 tableCell.appendChild(block)
                 block.setAttribute("id", index);
                 // mark bombs 
-               // block.setAttribute("bombe", bomb[index]===1)
-                block.setAttribute('value', calculateNeighbours(index).map(n => bomb[n]).reduce((prev, curr) => prev + curr));
+                // block.setAttribute("bombe", bomb[index]===1)
+                block.setAttribute('value', calculateNeighbours(index).map(n => bombs[n]).reduce((prev, curr) => prev + curr));
                 block.addEventListener("click", onBlockClick);
-                block.addEventListener('contextmenu', rightclick); 
-                block.addEventListener('contextmenu', event => event.preventDefault());
+                block.addEventListener('contextmenu', onRightClick); 
                 
                 
                 blocks[index] = block;
@@ -149,36 +162,34 @@
         }
     }
     
-    function rightclick(evt) {
-        
+    function onRightClick(evt) {
+        // hide context menu
+        evt.preventDefault()
         const target = evt.target;
         const index = parseInt(target.getAttribute('id'))
         
-       // const index = id;
-        
-        if(rightclicked[index]===false){
-            rightclicked[index] = true;
-            
+        if(markers[index]===false){
+            markers[index] = true;
             target.classList.add('marked');
             
         }else{
-            rightclicked[index] = false;
+            markers[index] = false;
             target.classList.remove('marked');
         }
        
     }
     
     function onBlockClick(evt) {
-        
         const target = evt.target;
         const index = parseInt(target.getAttribute('id'))
-        if(rightclicked[index]===false){
+        if(markers[index]===false){
             if (clicked[index]===false){
                 clicked[index] = true;
                 won[index]=1;
-                if (bomb[index]) {
+                if (bombs[index]) {
                     target.classList.add('Lost');
-                    alert('you lose')
+                    alert('you lose, try again')
+                    init();
                 } else {
                     const neighbours = {[index]: true};
                     if (target.getAttribute('value') === '0') {
@@ -209,32 +220,10 @@
                 } 
             }
             
-            let checkwon = won.find(element => element ===0);
-            if (checkwon===undefined){
-                
-                
-              
+            let hasWon = won.find(element => element ===0) === undefined;
+            if (hasWon){
                 alert('Gewonnen!');
-                bomb= calculateBombs();
-                
-                calculateNeighbours();
-                
-                won = bomb.slice();
-                clicked = Array(size * size).fill(false);
-                rightclicked = Array(size * size).fill(false);
-                
-                for(i=0; i<size*size;i++){
-                    const block = blocks[i];
-                    block.classList.remove('empty');
-                    block.classList.remove('marked');
-                    
-                    block.innerText = "";
-                    block.setAttribute('value', calculateNeighbours(i).map(n => bomb[n]).reduce((prev, curr) => prev + curr));
-                   // block.setAttribute("bombe", bomb[i] === 1)
-                   
-                }
-                
-               
+                init();
             }
         }
         
